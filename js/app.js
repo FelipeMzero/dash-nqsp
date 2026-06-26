@@ -16,6 +16,11 @@ let allData = [];
 let filteredData = [];
 let currentView = 'nc'; // 'nc' or 'ea'
 
+// Pagination & search state for the detailed list
+let currentDetailsPage = 1;
+const detailsPerPage = 10;
+let filteredDetailsData = [];
+
 // Monthly comparison data (populated in processData)
 let monthlyCompareData = null;
 
@@ -178,6 +183,61 @@ document.addEventListener('DOMContentLoaded', function() {
     btnEA.addEventListener('click', () => {
         if (hasEA) setDashboardView('ea');
     });
+    const btnCompare = document.getElementById('btn-view-compare');
+    if (btnCompare) {
+        btnCompare.addEventListener('click', () => {
+            setDashboardView('compare');
+        });
+    }
+    
+    // Detailed list event listeners
+    const searchInput = document.getElementById('search-details');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterDetailsBySearch);
+    }
+
+    const prevPageBtn = document.getElementById('btn-prev-page');
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            if (currentDetailsPage > 1) {
+                currentDetailsPage--;
+                renderDetailsTable();
+            }
+        });
+    }
+
+    const nextPageBtn = document.getElementById('btn-next-page');
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            const endIdx = currentDetailsPage * detailsPerPage;
+            if (endIdx < filteredDetailsData.length) {
+                currentDetailsPage++;
+                renderDetailsTable();
+            }
+        });
+    }
+
+    const exportCsvBtn = document.getElementById('btn-export-csv');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', exportToCSV);
+    }
+
+    // Modal listeners
+    const closeModalBtn = document.getElementById('btn-close-record-modal');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            document.getElementById('record-modal').classList.add('hidden');
+        });
+    }
+
+    const modalOverlay = document.getElementById('record-modal');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.add('hidden');
+            }
+        });
+    }
     
     initCustomDatePicker();
     setupChartZoom();
@@ -188,25 +248,41 @@ function setDashboardView(view) {
     
     const btnNC = document.getElementById('btn-view-nc');
     const btnEA = document.getElementById('btn-view-ea');
+    const btnCompare = document.getElementById('btn-view-compare');
     
     if (view === 'nc') {
         btnNC.classList.add('active');
         btnEA.classList.remove('active');
+        if (btnCompare) btnCompare.classList.remove('active');
         document.querySelector('.topbar-title').textContent = 'Não Conformidades';
         document.querySelector('.report-header-left h1').textContent = 'Não Conformidades';
         document.getElementById('report-name').value = 'Não Conformidades - NQSP';
         
         const stored = sessionStorage.getItem('nqsp_data_nc');
         allData = stored ? JSON.parse(stored) : [];
-    } else {
+    } else if (view === 'ea') {
         btnNC.classList.remove('active');
         btnEA.classList.add('active');
+        if (btnCompare) btnCompare.classList.remove('active');
         document.querySelector('.topbar-title').textContent = 'Eventos Adversos';
         document.querySelector('.report-header-left h1').textContent = 'Eventos Adversos';
         document.getElementById('report-name').value = 'Eventos Adversos - NQSP';
         
         const stored = sessionStorage.getItem('nqsp_data_ea');
         allData = stored ? JSON.parse(stored) : [];
+    } else if (view === 'compare') {
+        btnNC.classList.remove('active');
+        btnEA.classList.remove('active');
+        if (btnCompare) btnCompare.classList.add('active');
+        document.querySelector('.topbar-title').textContent = 'Demografia & Desempenho';
+        document.querySelector('.report-header-left h1').textContent = 'Demografia & Desempenho';
+        document.getElementById('report-name').value = 'Demografia_e_Desempenho_NQSP';
+        
+        const storedNC = sessionStorage.getItem('nqsp_data_nc');
+        const storedEA = sessionStorage.getItem('nqsp_data_ea');
+        const dataNC = storedNC ? JSON.parse(storedNC) : [];
+        const dataEA = storedEA ? JSON.parse(storedEA) : [];
+        allData = [...dataNC, ...dataEA];
     }
     
     populateFilterOptions();
@@ -214,8 +290,16 @@ function setDashboardView(view) {
 }
 
 function populateFilterOptions() {
-    const filenameKey = currentView === 'nc' ? 'nqsp_filename_nc' : 'nqsp_filename_ea';
-    const filename = sessionStorage.getItem(filenameKey) || '';
+    let filename = '';
+    if (currentView === 'nc') {
+        filename = sessionStorage.getItem('nqsp_filename_nc') || '';
+    } else if (currentView === 'ea') {
+        filename = sessionStorage.getItem('nqsp_filename_ea') || '';
+    } else {
+        const fnNC = sessionStorage.getItem('nqsp_filename_nc') || '';
+        const fnEA = sessionStorage.getItem('nqsp_filename_ea') || '';
+        filename = [fnNC, fnEA].filter(Boolean).join(' + ');
+    }
 
     if (filename) {
         document.getElementById('last-update').textContent = filename;
@@ -401,6 +485,13 @@ function processData(data) {
     document.getElementById('metric-total').textContent = total;
     document.getElementById('total-records').textContent = total + ' registros';
 
+    // Store filtered records for the detailed list, reset pagination and search inputs
+    filteredDetailsData = [...data];
+    currentDetailsPage = 1;
+    const searchInput = document.getElementById('search-details');
+    if (searchInput) searchInput.value = '';
+    setTimeout(renderDetailsTable, 0);
+
     const statusCounts = countByProperty(data, 'Status');
     const sortedStatus = Object.entries(statusCounts).sort((a, b) => b[1] - a[1]);
 
@@ -478,11 +569,16 @@ function processData(data) {
         document.getElementById('header-impacto').textContent = 'Impacto no Processo';
         document.getElementById('header-consequencia').textContent = 'Requisito/Documento Violado';
         document.getElementById('header-risco').textContent = 'Responsável';
-    } else {
+    } else if (currentView === 'ea') {
         document.getElementById('header-tipo-nc').textContent = 'Metas de Segurança do Paciente';
         document.getElementById('header-impacto').textContent = 'Houve Consequências?';
         document.getElementById('header-consequencia').textContent = 'Consequência do Dano';
         document.getElementById('header-risco').textContent = 'Classificação do Risco';
+    } else if (currentView === 'compare') {
+        document.getElementById('header-tipo-nc').textContent = 'Tipo de Ocorrência (Geral)';
+        document.getElementById('header-impacto').textContent = 'Distribuição por Sexo';
+        document.getElementById('header-consequencia').textContent = 'Distribuição por Faixa Etária';
+        document.getElementById('header-risco').textContent = 'Avaliação de Desempenho (Responsável)';
     }
 
     const classificacao = countByProperty(data, 'Classificação da Ocorrência');
@@ -505,30 +601,79 @@ function processData(data) {
     const sortedTipo = Object.entries(tipoNC).sort((a, b) => b[1] - a[1]);
     createBarChart('chart-tipo-nc', sortedTipo, '#8b5cf6', true);
 
-    const impactoKey = currentView === 'nc' ? 'Impacto no Processo' : 'Houve consequências para o paciente?';
-    const impacto = countByProperty(data, impactoKey);
-    const sortedImpacto = Object.entries(impacto).sort((a, b) => b[1] - a[1]);
-    createPieChart('chart-impacto', sortedImpacto, colorPalette);
-
-    const consequenciaKey = currentView === 'nc' ? 'Requisito/Documento Violado' : 'Consequência do dano';
-    const consequencia = countByProperty(data, consequenciaKey);
-    const sortedCons = Object.entries(consequencia).sort((a, b) => b[1] - a[1]);
-    if (currentView === 'nc') {
-        // Use a bar chart for requirements since they are text-heavy and numerous
-        createBarChart('chart-consequencia', sortedCons.slice(0, 10), '#fbbc04', true);
+    if (currentView === 'compare') {
+        const sexo = countByProperty(data, 'Sexo');
+        const sortedSexo = Object.entries(sexo).sort((a, b) => b[1] - a[1]);
+        createPieChart('chart-impacto', sortedSexo, colorPalette);
     } else {
-        createPieChart('chart-consequencia', sortedCons, colorPalette);
+        const impactoKey = currentView === 'nc' ? 'Impacto no Processo' : 'Houve consequências para o paciente?';
+        const impacto = countByProperty(data, impactoKey);
+        const sortedImpacto = Object.entries(impacto).sort((a, b) => b[1] - a[1]);
+        createPieChart('chart-impacto', sortedImpacto, colorPalette);
     }
 
-    const riscoKey = currentView === 'nc' ? 'Responsável' : 'Classificação do Risco';
-    const risco = countByProperty(data, riscoKey);
-    const sortedRisco = Object.entries(risco).sort((a, b) => b[1] - a[1]);
-    if (currentView === 'nc') {
-        // Use a bar chart for Responsáveis since it's text-heavy
+    if (currentView === 'compare') {
+        const faixasEtarias = countByAgeRange(data);
+        const sortedAges = Object.entries(faixasEtarias).sort((a, b) => b[1] - a[1]);
+        createBarChart('chart-consequencia', sortedAges, '#fbbc04', true);
+    } else {
+        const consequenciaKey = currentView === 'nc' ? 'Requisito/Documento Violado' : 'Consequência do dano';
+        const consequencia = countByProperty(data, consequenciaKey);
+        const sortedCons = Object.entries(consequencia).sort((a, b) => b[1] - a[1]);
+        if (currentView === 'nc') {
+            createBarChart('chart-consequencia', sortedCons.slice(0, 10), '#fbbc04', true);
+        } else {
+            createPieChart('chart-consequencia', sortedCons, colorPalette);
+        }
+    }
+
+    if (currentView === 'compare') {
+        const risco = countByProperty(data, 'Responsável');
+        const sortedRisco = Object.entries(risco).sort((a, b) => b[1] - a[1]);
         createBarChart('chart-risco', sortedRisco.slice(0, 10), '#06b6d4', true);
     } else {
-        createBarChart('chart-risco', sortedRisco, ['#34a853', '#fbbc04', '#ea4335'], true);
+        const riscoKey = currentView === 'nc' ? 'Responsável' : 'Classificação do Risco';
+        const risco = countByProperty(data, riscoKey);
+        const sortedRisco = Object.entries(risco).sort((a, b) => b[1] - a[1]);
+        if (currentView === 'nc') {
+            createBarChart('chart-risco', sortedRisco.slice(0, 10), '#06b6d4', true);
+        } else {
+            createBarChart('chart-risco', sortedRisco, ['#34a853', '#fbbc04', '#ea4335'], true);
+        }
     }
+}
+
+function countByAgeRange(data) {
+    const counts = {
+        'Crianças (0-12)': 0,
+        'Adolescentes (13-17)': 0,
+        'Adultos (18-59)': 0,
+        'Idosos (60+)': 0,
+        'n/d': 0
+    };
+    data.forEach(row => {
+        let ageVal = row['Idade'];
+        if (!ageVal) {
+            counts['n/d']++;
+            return;
+        }
+        const num = parseInt(String(ageVal).replace(/\D/g, ''), 10);
+        if (isNaN(num)) {
+            counts['n/d']++;
+        } else if (num <= 12) {
+            counts['Crianças (0-12)']++;
+        } else if (num <= 17) {
+            counts['Adolescentes (13-17)']++;
+        } else if (num <= 59) {
+            counts['Adultos (18-59)']++;
+        } else {
+            counts['Idosos (60+)']++;
+        }
+    });
+    for (let k in counts) {
+        if (counts[k] === 0) delete counts[k];
+    }
+    return counts;
 }
 
 function countByProperty(data, prop) {
@@ -1429,4 +1574,207 @@ function isSameDay(d1, d2) {
     return d1.getFullYear() === d2.getFullYear() &&
            d1.getMonth() === d2.getMonth() &&
            d1.getDate() === d2.getDate();
+}
+
+function renderDetailsTable() {
+    const tbody = document.querySelector('#details-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const startIdx = (currentDetailsPage - 1) * detailsPerPage;
+    const endIdx = startIdx + detailsPerPage;
+    const paginated = filteredDetailsData.slice(startIdx, endIdx);
+
+    const total = filteredDetailsData.length;
+    
+    // Update pagination info
+    const infoSpan = document.getElementById('pagination-info');
+    if (infoSpan) {
+        if (total > 0) {
+            infoSpan.textContent = `Registros ${startIdx + 1}-${Math.min(endIdx, total)} de ${total}`;
+        } else {
+            infoSpan.textContent = 'Sem registros';
+        }
+    }
+
+    // Enable/disable page buttons
+    const prevBtn = document.getElementById('btn-prev-page');
+    const nextBtn = document.getElementById('btn-next-page');
+    if (prevBtn) prevBtn.disabled = currentDetailsPage === 1;
+    if (nextBtn) nextBtn.disabled = endIdx >= total;
+
+    if (paginated.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum registro encontrado</td></tr>`;
+        return;
+    }
+
+    paginated.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        
+        // Data format
+        const rawDate = row['Data de Registro'] || row['Criado em'] || 'n/d';
+        const parsed = parseDate(rawDate);
+        const dateStr = parsed ? formatDateToBR(parsed.date) : rawDate.split(' ')[0];
+
+        const sector = row['Setor Notificado'] || 'n/d';
+        
+        // Description snippet
+        const desc = row['Descrição'] || row['Descrição da NC'] || row['Titulo'] || 'n/d';
+        const truncatedDesc = desc.length > 80 ? desc.substring(0, 80) + '...' : desc;
+
+        // Responsavel / Iniciais
+        let responsible = 'n/d';
+        if (currentView === 'nc') {
+            responsible = row['Responsável'] || 'n/d';
+        } else if (currentView === 'ea') {
+            responsible = row['Iniciais do Paciente'] || 'n/d';
+        } else {
+            responsible = row['Responsável'] || row['Iniciais do Paciente'] || 'n/d';
+        }
+
+        const status = row['Status'] || 'n/d';
+
+        // Calculate actual index in filteredDetailsData
+        const actualIndex = startIdx + i;
+
+        tr.innerHTML = `
+            <td><strong>${dateStr}</strong></td>
+            <td>${sector}</td>
+            <td title="${desc.replace(/"/g, '&quot;')}">${truncatedDesc}</td>
+            <td>${responsible}</td>
+            <td><span class="status-badge ${status.toLowerCase().includes('concl') ? 'status-concluido' : 'status-pendente'}">${status}</span></td>
+            <td><button class="btn-action" onclick="showRecordDetails(${actualIndex})">Visualizar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function filterDetailsBySearch() {
+    const q = document.getElementById('search-details').value.toLowerCase().trim();
+    
+    // Filter inside current layout filters
+    if (!q) {
+        filteredDetailsData = [...filteredData];
+    } else {
+        filteredDetailsData = filteredData.filter(row => {
+            return Object.values(row).some(val => {
+                if (!val) return false;
+                return String(val).toLowerCase().includes(q);
+            });
+        });
+    }
+    
+    currentDetailsPage = 1;
+    renderDetailsTable();
+}
+
+function showRecordDetails(index) {
+    const row = filteredDetailsData[index];
+    if (!row) return;
+
+    const modalBody = document.getElementById('record-modal-body');
+    if (!modalBody) return;
+    
+    modalBody.innerHTML = '';
+
+    // Create container for grids
+    const detailGrid = document.createElement('div');
+    detailGrid.className = 'detail-grid-modal';
+
+    // Helper to add detail item
+    function addField(label, val, targetContainer) {
+        if (!val || val === 'n/d') return;
+        const div = document.createElement('div');
+        div.className = 'detail-item';
+        div.innerHTML = `
+            <span class="detail-label">${label}</span>
+            <span class="detail-val">${val}</span>
+        `;
+        targetContainer.appendChild(div);
+    }
+
+    // Common fields
+    const dateRaw = row['Data de Registro'] || row['Criado em'] || '';
+    const parsed = parseDate(dateRaw);
+    const dateFormatted = parsed ? formatDateToBR(parsed.date) : dateRaw;
+
+    addField('Data de Registro', dateFormatted, detailGrid);
+    addField('Setor Notificado', row['Setor Notificado'], detailGrid);
+    addField('Setor Notificante', row['Setor Notificante'], detailGrid);
+    addField('Local do Ocorrido', row['Local do Ocorrido'], detailGrid);
+    addField('Turno do Ocorrido', row['Turno do Ocorrido:'], detailGrid);
+    addField('Status', row['Status'], detailGrid);
+
+    // View specific fields
+    if (currentView === 'nc') {
+        addField('Responsável', row['Responsável'], detailGrid);
+        addField('Tipo de Não Conformidade', row['Tipo de Não Conformidade'], detailGrid);
+        addField('Requisito/Documento Violado', row['Requisito/Documento Violado'], detailGrid);
+        addField('Impacto no Processo', row['Impacto no Processo'], detailGrid);
+        addField('Classificação da Ocorrência', row['Classificação da Ocorrência'], detailGrid);
+        addField('Classificação do Risco', row['Classificação do Risco'], detailGrid);
+    } else {
+        addField('Iniciais do Paciente', row['Iniciais do Paciente'], detailGrid);
+        addField('Nº Prontuário', row['Nº Prontuário'], detailGrid);
+        addField('Houve Conseq. Paciente?', row['Houve consequências para o paciente?'], detailGrid);
+        addField('Conseq. Detalhe', row['Qual?'], detailGrid);
+        addField('Consequência do Dano', row['Consequência do dano'], detailGrid);
+        addField('Metas de Segurança', row['NC - Metas de Segurança paciente'] || row['Metas de Segurança paciente'], detailGrid);
+        addField('Classificação da Ocorrência', row['Classificação da Ocorrência'], detailGrid);
+        addField('Classificação do Risco', row['Classificação do Risco'], detailGrid);
+        addField('Raça/Cor', row['Raça / Cor'] || row['Raça/ Cor'], detailGrid);
+    }
+
+    modalBody.appendChild(detailGrid);
+
+    // Descriptions and other text areas should take full width (not inside the 2-column grid)
+    const desc = row['Descrição'] || row['Descrição da NC'] || row['Titulo'] || '';
+    if (desc) {
+        addField('Descrição Detalhada', desc, modalBody);
+    }
+
+    const action = row['Qual sua ação imediata?'] || '';
+    if (action) {
+        addField('Ação Imediata Realizada', action, modalBody);
+    }
+
+    // Show modal
+    document.getElementById('record-modal').classList.remove('hidden');
+}
+
+function exportToCSV() {
+    if (filteredDetailsData.length === 0) {
+        alert('Sem dados para exportar.');
+        return;
+    }
+
+    // Get headers from first row
+    const headers = Object.keys(filteredDetailsData[0]);
+    
+    // Create CSV rows
+    const csvRows = [];
+    csvRows.push(headers.join(';')); // Semicolon separated for Brazilian Excel compatibility
+
+    filteredDetailsData.forEach(row => {
+        const values = headers.map(header => {
+            const val = row[header] || '';
+            // Escape double quotes and wrap in quotes if contains spaces/semicolons
+            const escaped = String(val).replace(/"/g, '""');
+            return `"${escaped}"`;
+        });
+        csvRows.push(values.join(';'));
+    });
+
+    const csvContent = '\ufeff' + csvRows.join('\n'); // UTF-8 BOM to display accented chars in Excel properly
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const filename = `${currentView === 'nc' ? 'nao_conformidades' : 'eventos_adversos'}_filtrado.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
