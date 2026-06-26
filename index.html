@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NQSP - Upload de Dados | HRMJ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-upload">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="assets/hrmj.png" alt="HRMJ" class="sidebar-logo-icon-img">
+            <div>
+                <div class="sidebar-logo-text">NQSP</div>
+                <div class="sidebar-logo-sub">Dashboards</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-label">Navegação</div>
+            <a class="sidebar-item active" href="index.html">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload
+            </a>
+            <a class="sidebar-item" href="dashboard.html">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                Dashboard
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                NQSP v2.0
+            </div>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <span class="topbar-title">Upload de Dados</span>
+                <span class="topbar-badge">NQSP</span>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-orgs">
+                    <img src="assets/logo_interact.png" alt="Interact" title="SAS Interact">
+                    <img src="assets/hrmj.png" alt="HRMJ" title="HRMJ - Hospital Regional do Marajó">
+                    <img src="assets/estado.png" alt="Governo do Pará" title="Governo do Pará">
+                </div>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="upload-hero fade-in">
+                <div class="upload-card">
+                    <div class="upload-icon">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <polyline points="9 15 12 12 15 15"></polyline>
+                        </svg>
+                    </div>
+                    <h2>Importar Dados CSV</h2>
+                    <p>Selecione o arquivo CSV exportado do Interact para gerar o dashboard automaticamente.</p>
+                    <div class="drop-zone" id="drop-zone">
+                        <span>Arraste e solte o arquivo CSV aqui</span>
+                        <span class="drop-or">ou</span>
+                        <button class="btn btn-primary" id="btn-select">Selecionar Arquivo</button>
+                        <input type="file" id="csv-file" accept=".csv" hidden>
+                    </div>
+                    <div class="file-info hidden" id="file-info">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span id="file-name"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('csv-file');
+        const btnSelect = document.getElementById('btn-select');
+        const fileInfo = document.getElementById('file-info');
+
+        btnSelect.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            document.getElementById('file-name').textContent = file.name;
+            fileInfo.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const arr = new Uint8Array(e.target.result);
+
+                function tryDecode(encoding) {
+                    try {
+                        const decoder = new TextDecoder(encoding, { fatal: true });
+                        return decoder.decode(arr);
+                    } catch {
+                        return null;
+                    }
+                }
+
+                let text = tryDecode('utf-8') || tryDecode('iso-8859-1') || tryDecode('windows-1252');
+                if (!text) {
+                    text = new TextDecoder('utf-8', { fatal: false }).decode(arr);
+                }
+
+                Papa.parse(text, {
+                    header: true,
+                    skipEmptyLines: true,
+                    delimiter: ';',
+                    complete: function(results) {
+                        const keyMap = {
+                            'Data do Incidente:': 'Data do Ocorrido',
+                            'Turno do Incidente:': 'Turno do Ocorrido:',
+                            'Setor Notificador': 'Setor Notificante',
+                            'Consequência do Dano': 'Consequência do dano',
+                            'Local do Evento': 'Local do Ocorrido',
+                            'Nº de Prontuário:': 'Nº Prontuário',
+                            'Houve consequência para o paciente?': 'Houve consequências para o paciente?',
+                            'Ação imediata realizada pelo Notificador': 'Qual sua ação imediata?',
+                            'Qual o tipo de Incidente': 'Tipo de Não Conformidade',
+                            'TIPO DE NÃO CONFORMIDADE': 'Tipo de Não Conformidade',
+                            'Raça/ Cor': 'Raça / Cor'
+                        };
+
+                        const normalizedData = results.data.map(row => {
+                            const normalizedRow = {};
+                            for (let key in row) {
+                                if (row.hasOwnProperty(key)) {
+                                    const cleanKey = key.trim();
+                                    const mappedKey = keyMap[cleanKey] || cleanKey;
+                                    
+                                    let val = row[key];
+                                    if (typeof val === 'string') {
+                                        val = val.trim();
+                                    }
+                                    normalizedRow[mappedKey] = val;
+                                }
+                            }
+                            return normalizedRow;
+                        });
+
+                        const jsonData = JSON.stringify(normalizedData);
+                        sessionStorage.setItem('nqsp_data', jsonData);
+                        sessionStorage.setItem('nqsp_filename', file.name);
+                        window.open('dashboard.html', '_blank');
+                    }
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>

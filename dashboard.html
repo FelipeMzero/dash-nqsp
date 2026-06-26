@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard NQSP - Não Conformidades | HRMJ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="page-dashboard">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="assets/hrmj.png" alt="HRMJ" class="sidebar-logo-icon-img">
+            <div>
+                <div class="sidebar-logo-text">NQSP</div>
+                <div class="sidebar-logo-sub">Dashboards</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-label">Navegação</div>
+            <a class="sidebar-item" href="index.html">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload
+            </a>
+            <a class="sidebar-item active" href="dashboard.html">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                Dashboard
+            </a>
+            <div class="sidebar-section-label">Ferramentas</div>
+            <div class="sidebar-item" id="btn-export-pdf">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Exportar PDF
+            </div>
+            <div class="sidebar-item" id="btn-export-img">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Exportar Imagem
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-item" id="btn-back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Novo Arquivo
+            </div>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <span class="topbar-title">Não Conformidades</span>
+                <span class="topbar-badge" id="total-records">0 registros</span>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-orgs">
+                    <img src="assets/logo_interact.png" alt="Interact" title="SAS Interact">
+                    <img src="assets/hrmj.png" alt="HRMJ" title="HRMJ - Hospital Regional do Marajó">
+                    <img src="assets/estado.png" alt="Governo do Pará" title="Governo do Pará">
+                </div>
+            </div>
+        </header>
+
+        <div class="page-content fade-in" id="dashboard-content">
+            <!-- Report Header -->
+            <div class="report-header">
+                <div class="report-header-left">
+                    <h1>Dashboard NQSP</h1>
+                    <div class="report-name-row">
+                        <span class="report-name-label">Relatório:</span>
+                        <input type="text" id="report-name" class="report-name-input" value="Não Conformidades - NQSP" placeholder="Nome do relatório">
+                    </div>
+                    <p>Núcleo de Qualidade e Segurança do Paciente — <span id="last-update">sem dados</span></p>
+                </div>
+                <div class="report-header-right">
+                    <!-- Custom Date Picker Trigger and Dropdown -->
+                    <div class="custom-date-picker" id="custom-date-picker">
+                        <div class="datepicker-trigger" id="datepicker-trigger">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span id="datepicker-label">Selecionar período</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="datepicker-dropdown hidden" id="datepicker-dropdown">
+                            <div class="datepicker-calendars">
+                                <div class="calendar-month">
+                                    <div class="calendar-header">
+                                        <button type="button" id="btn-cal-prev">&lt;</button>
+                                        <span class="calendar-month-title" id="calendar-month-title">Janeiro 2026</span>
+                                        <button type="button" id="btn-cal-next">&gt;</button>
+                                    </div>
+                                    <div class="calendar-weekdays">
+                                        <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                                    </div>
+                                    <div class="calendar-days" id="calendar-days-grid">
+                                        <!-- Days dynamically rendered -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="datepicker-actions">
+                                <span class="selected-range-display" id="selected-range-display">Sem seleção</span>
+                                <div class="datepicker-buttons">
+                                    <button class="btn btn-ghost btn-sm" id="btn-cal-cancel">Cancelar</button>
+                                    <button class="btn btn-primary btn-sm" id="btn-cal-apply">Aplicar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden original inputs to maintain compatibility with filters -->
+                    <input type="hidden" id="filter-date-start">
+                    <input type="hidden" id="filter-date-end">
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Setor:</label>
+                    <select id="filter-setor" class="filter-select">
+                        <option value="">Todos os Setores</option>
+                    </select>
+                </div>
+                <div class="filter-divider"></div>
+                <div class="filter-group">
+                    <label>Turno:</label>
+                    <select id="filter-turno" class="filter-select">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-divider"></div>
+                <button class="btn btn-primary btn-sm" id="btn-apply-filter">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    Aplicar
+                </button>
+                <button class="btn btn-ghost btn-sm" id="btn-reset-filter">Limpar</button>
+            </div>
+
+            <!-- Metrics Cards -->
+            <div class="metrics-row" id="metrics-row">
+                <div class="metric-card">
+                    <span class="metric-label">Total de Registros</span>
+                    <span class="metric-value" id="metric-total">0</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Status Concluído</span>
+                    <span class="metric-value" id="metric-concluido">0</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Status Pendente</span>
+                    <span class="metric-value" id="metric-pendente">0</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Setores Envolvidos</span>
+                    <span class="metric-value" id="metric-setores">0</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Período dos Dados</span>
+                    <span class="metric-value" id="metric-periodo-dias">0 dias</span>
+                    <span class="metric-change" style="font-size: 11px; font-weight: 500; color: var(--text-muted);" id="metric-periodo-datas">DD/MM/AAAA a DD/MM/AAAA</span>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <!-- Row 1: Status + Pie + Setor Notificado -->
+            <div class="charts-grid grid-3">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Status</h3>
+                    </div>
+                    <div class="table-container">
+                        <table id="status-table">
+                            <thead><tr><th>Status</th><th>Qtd ▼</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Status</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-status-pie"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Setor Notificado</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-setor-notificado"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Row 2: Setor Notificador + Timeline -->
+            <div class="charts-grid grid-2" style="margin-top: 16px;">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Setor Notificador</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-setor-notificador"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Linha do Tempo (Registro vs. Ocorrência)</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-timeline"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Row 3: Classificação + Tipo NC -->
+            <div class="charts-grid grid-2" style="margin-top: 16px;">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Classificação da Ocorrência</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-classificacao"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Tipo de Não Conformidade</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-tipo-nc"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Row 4: Impacto + Consequência + Risco -->
+            <div class="charts-grid grid-3" style="margin-top: 16px;">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Impacto no Processo</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-impacto"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Consequência do Dano</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-consequencia"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3>Classificação do Risco</h3>
+                    </div>
+                    <div class="chart-wrapper"><canvas id="chart-risco"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="dashboard-footer">
+                <span>Fonte de dados: Interact &mdash; Núcleo de Qualidade e Segurança do Paciente &mdash; HRMJ</span>
+            </div>
+        </div>
+
+        <!-- Detailed Chart/Table View -->
+        <div class="chart-detail-view hidden" id="chart-detail-view">
+            <div class="detail-header">
+                <button class="btn btn-secondary btn-sm" id="btn-detail-back">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Voltar ao Dashboard
+                </button>
+                <h2 id="detail-chart-title">Título do Gráfico</h2>
+            </div>
+            <div class="compare-bar hidden" id="compare-bar">
+                <div class="compare-group">
+                    <label>Mês Inicial:</label>
+                    <select id="compare-month-start" class="filter-select"></select>
+                </div>
+                <div class="compare-group">
+                    <label>Mês Final:</label>
+                    <select id="compare-month-end" class="filter-select"></select>
+                </div>
+                <button class="btn btn-primary btn-sm" id="btn-compare-months">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Comparar
+                </button>
+            </div>
+            <div class="detail-content">
+                <div class="chart-card detail-card" id="detail-card-container">
+                    <div class="chart-wrapper" id="detail-chart-wrapper">
+                        <canvas id="chart-detail-canvas"></canvas>
+                    </div>
+                    <div class="table-container hidden" id="detail-table-wrapper">
+                        <table id="detail-table-content">
+                            <!-- Cloned table content will go here -->
+                        </table>
+                    </div>
+                    <div class="compare-results hidden" id="compare-results">
+                        <div class="compare-results-grid">
+                            <div class="compare-result-card">
+                                <span class="compare-result-label">Mês Inicial</span>
+                                <span class="compare-result-value" id="comp-mes1-nome">—</span>
+                                <span class="compare-result-count">Registros: <strong id="comp-mes1-reg">0</strong></span>
+                                <span class="compare-result-count">Ocorrências: <strong id="comp-mes1-occ">0</strong></span>
+                            </div>
+                            <div class="compare-result-card">
+                                <span class="compare-result-label">Mês Final</span>
+                                <span class="compare-result-value" id="comp-mes2-nome">—</span>
+                                <span class="compare-result-count">Registros: <strong id="comp-mes2-reg">0</strong></span>
+                                <span class="compare-result-count">Ocorrências: <strong id="comp-mes2-occ">0</strong></span>
+                            </div>
+                            <div class="compare-result-card">
+                                <span class="compare-result-label">Variação</span>
+                                <span class="compare-result-count">Registros: <strong id="comp-var-reg">—</strong></span>
+                                <span class="compare-result-count">Ocorrências: <strong id="comp-var-occ">—</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
