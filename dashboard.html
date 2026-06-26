@@ -26,10 +26,19 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 Upload
             </a>
-            <a class="sidebar-item active" href="dashboard.html">
+            <a class="sidebar-item active" href="dashboard.html" id="nav-dashboard">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                 Dashboard
             </a>
+            <div class="sidebar-section-label">Visões</div>
+            <button class="sidebar-item active" id="btn-view-nc">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Não Conformidades
+            </button>
+            <button class="sidebar-item" id="btn-view-ea">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Eventos Adversos
+            </button>
             <div class="sidebar-section-label">Ferramentas</div>
             <div class="sidebar-item" id="btn-export-pdf">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -210,13 +219,13 @@
             <div class="charts-grid grid-2" style="margin-top: 16px;">
                 <div class="chart-card">
                     <div class="chart-card-header">
-                        <h3>Classificação da Ocorrência</h3>
+                        <h3 id="header-classificacao">Classificação da Ocorrência</h3>
                     </div>
                     <div class="chart-wrapper"><canvas id="chart-classificacao"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <div class="chart-card-header">
-                        <h3>Tipo de Não Conformidade</h3>
+                        <h3 id="header-tipo-nc">Tipo de Não Conformidade</h3>
                     </div>
                     <div class="chart-wrapper"><canvas id="chart-tipo-nc"></canvas></div>
                 </div>
@@ -226,19 +235,19 @@
             <div class="charts-grid grid-3" style="margin-top: 16px;">
                 <div class="chart-card">
                     <div class="chart-card-header">
-                        <h3>Impacto no Processo</h3>
+                        <h3 id="header-impacto">Impacto no Processo</h3>
                     </div>
                     <div class="chart-wrapper"><canvas id="chart-impacto"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <div class="chart-card-header">
-                        <h3>Consequência do Dano</h3>
+                        <h3 id="header-consequencia">Consequência do Dano</h3>
                     </div>
                     <div class="chart-wrapper"><canvas id="chart-consequencia"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <div class="chart-card-header">
-                        <h3>Classificação do Risco</h3>
+                        <h3 id="header-risco">Classificação do Risco</h3>
                     </div>
                     <div class="chart-wrapper"><canvas id="chart-risco"></canvas></div>
                 </div>

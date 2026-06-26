@@ -14,6 +14,7 @@ const lineColor = '#1a73e8';
 let chartInstances = {};
 let allData = [];
 let filteredData = [];
+let currentView = 'nc'; // 'nc' or 'ea'
 
 // Monthly comparison data (populated in processData)
 let monthlyCompareData = null;
@@ -82,16 +83,35 @@ function formatDateToBR(date) {
     const y = date.getFullYear();
     return `${d}/${m}/${y}`;
 }
+
 function updateCSVPeriodMetric() {
+    const startVal = document.getElementById('filter-date-start').value;
+    const endVal = document.getElementById('filter-date-end').value;
+    
     let csvStartDateStr = '';
     let csvEndDateStr = '';
     let csvDiffDays = 0;
     
-    if (absMinDate && absMaxDate) {
-        csvStartDateStr = formatDateToBR(absMinDate);
-        csvEndDateStr = formatDateToBR(absMaxDate);
-        const timeDiff = Math.abs(absMaxDate.getTime() - absMinDate.getTime());
-        csvDiffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+    const parsedStart = parseDate(startVal);
+    const parsedEnd = parseDate(endVal);
+    
+    if (parsedStart && parsedEnd) {
+        const csvStartDate = parsedStart.date;
+        const csvEndDate = parsedEnd.date;
+        
+        csvStartDateStr = formatDateToBR(csvStartDate);
+        csvEndDateStr = formatDateToBR(csvEndDate);
+        
+        const timeDiff = Math.abs(csvEndDate.getTime() - csvStartDate.getTime());
+        csvDiffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // inclusive
+    } else {
+        if (absMinDate && absMaxDate) {
+            csvStartDateStr = formatDateToBR(absMinDate);
+            csvEndDateStr = formatDateToBR(absMaxDate);
+            
+            const timeDiff = Math.abs(absMaxDate.getTime() - absMinDate.getTime());
+            csvDiffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+        }
     }
 
     const metricPeriodoDias = document.getElementById('metric-periodo-dias');
@@ -108,12 +128,38 @@ function updateCSVPeriodMetric() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const stored = sessionStorage.getItem('nqsp_data');
-    if (stored) {
-        allData = JSON.parse(stored);
-        populateFilterOptions();
-        applyFilters();
+    const hasNC = !!sessionStorage.getItem('nqsp_data_nc');
+    const hasEA = !!sessionStorage.getItem('nqsp_data_ea');
+
+    if (!hasNC && !hasEA) {
+        window.location.href = 'index.html';
+        return;
     }
+
+    const btnNC = document.getElementById('btn-view-nc');
+    const btnEA = document.getElementById('btn-view-ea');
+
+    if (!hasNC) {
+        btnNC.disabled = true;
+        btnNC.style.opacity = '0.5';
+        btnNC.style.cursor = 'not-allowed';
+        btnNC.title = 'Nenhum arquivo de Não Conformidades foi carregado';
+    }
+    if (!hasEA) {
+        btnEA.disabled = true;
+        btnEA.style.opacity = '0.5';
+        btnEA.style.cursor = 'not-allowed';
+        btnEA.title = 'Nenhum arquivo de Eventos Adversos foi carregado';
+    }
+
+    // Default view
+    if (hasNC) {
+        currentView = 'nc';
+    } else {
+        currentView = 'ea';
+    }
+
+    setDashboardView(currentView);
 
     document.getElementById('btn-apply-filter').addEventListener('click', applyFilters);
     document.getElementById('btn-reset-filter').addEventListener('click', resetFilters);
@@ -125,59 +171,112 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
     document.getElementById('btn-export-img').addEventListener('click', exportImage);
     
+    // View switcher triggers
+    btnNC.addEventListener('click', () => {
+        if (hasNC) setDashboardView('nc');
+    });
+    btnEA.addEventListener('click', () => {
+        if (hasEA) setDashboardView('ea');
+    });
+    
     initCustomDatePicker();
     setupChartZoom();
 });
 
+function setDashboardView(view) {
+    currentView = view;
+    
+    const btnNC = document.getElementById('btn-view-nc');
+    const btnEA = document.getElementById('btn-view-ea');
+    
+    if (view === 'nc') {
+        btnNC.classList.add('active');
+        btnEA.classList.remove('active');
+        document.querySelector('.topbar-title').textContent = 'Não Conformidades';
+        document.querySelector('.report-header-left h1').textContent = 'Não Conformidades';
+        document.getElementById('report-name').value = 'Não Conformidades - NQSP';
+        
+        const stored = sessionStorage.getItem('nqsp_data_nc');
+        allData = stored ? JSON.parse(stored) : [];
+    } else {
+        btnNC.classList.remove('active');
+        btnEA.classList.add('active');
+        document.querySelector('.topbar-title').textContent = 'Eventos Adversos';
+        document.querySelector('.report-header-left h1').textContent = 'Eventos Adversos';
+        document.getElementById('report-name').value = 'Eventos Adversos - NQSP';
+        
+        const stored = sessionStorage.getItem('nqsp_data_ea');
+        allData = stored ? JSON.parse(stored) : [];
+    }
+    
+    populateFilterOptions();
+    applyFilters();
+}
+
 function populateFilterOptions() {
-    const stored = sessionStorage.getItem('nqsp_data');
-    if (!stored) return;
-    const data = JSON.parse(stored);
-    const filename = sessionStorage.getItem('nqsp_filename') || '';
+    const filenameKey = currentView === 'nc' ? 'nqsp_filename_nc' : 'nqsp_filename_ea';
+    const filename = sessionStorage.getItem(filenameKey) || '';
 
     if (filename) {
         document.getElementById('last-update').textContent = filename;
+    } else {
+        document.getElementById('last-update').textContent = 'sem dados';
     }
 
     const startInput = document.getElementById('filter-date-start');
     const endInput = document.getElementById('filter-date-end');
 
-    // Find absolute min/max dates across ALL data (full CSV range)
-    absMinDate = null;
-    absMaxDate = null;
-    data.forEach(row => {
-        const rawDate = row['Criado em'] || row['Data de Registro'];
-        const parsed = parseDate(rawDate);
-        if (parsed) {
-            const d = parsed.date;
-            if (!absMinDate || d < absMinDate) absMinDate = d;
-            if (!absMaxDate || d > absMaxDate) absMaxDate = d;
-        }
-    });
+    // Find absolute oldest (min) and newest (max) dates in the document to restrict calendar inputs and set defaults
+    if (allData && allData.length > 0) {
+        absMinDate = null;
+        absMaxDate = null;
+        allData.forEach(row => {
+            const rawDate = row['Data de Registro'] || row['Criado em'];
+            const parsed = parseDate(rawDate);
+            if (parsed) {
+                const d = parsed.date;
+                if (!absMinDate || d < absMinDate) absMinDate = d;
+                if (!absMaxDate || d > absMaxDate) absMaxDate = d;
+            }
+        });
 
-    // Set default date range filter from the absolute min/max dates
-    if (absMinDate && absMaxDate) {
+        // Set default date range filter to the absolute minimum and maximum dates found
         selectedStart = absMinDate;
         selectedEnd = absMaxDate;
 
-        startInput.value = formatDateToISO(selectedStart);
-        endInput.value = formatDateToISO(selectedEnd);
-        
-        startInput.min = formatDateToISO(absMinDate);
-        startInput.max = formatDateToISO(absMaxDate);
-        endInput.min = formatDateToISO(absMinDate);
-        endInput.max = formatDateToISO(absMaxDate);
-
-        const labelEl = document.getElementById('datepicker-label');
-        if (labelEl) {
-            labelEl.textContent = `${formatDateToBR(selectedStart)} a ${formatDateToBR(selectedEnd)}`;
+        if (selectedStart && selectedEnd) {
+            startInput.value = formatDateToISO(selectedStart);
+            endInput.value = formatDateToISO(selectedEnd);
+            
+            const labelEl = document.getElementById('datepicker-label');
+            if (labelEl) {
+                labelEl.textContent = `${formatDateToBR(selectedStart)} a ${formatDateToBR(selectedEnd)}`;
+            }
         }
+
+        if (absMinDate && absMaxDate) {
+            const isoMin = formatDateToISO(absMinDate);
+            const isoMax = formatDateToISO(absMaxDate);
+            
+            startInput.min = isoMin;
+            startInput.max = isoMax;
+            
+            endInput.min = isoMin;
+            endInput.max = isoMax;
+        }
+    } else {
+        selectedStart = null;
+        selectedEnd = null;
+        startInput.value = '';
+        endInput.value = '';
+        const labelEl = document.getElementById('datepicker-label');
+        if (labelEl) labelEl.textContent = 'Sem dados';
     }
 
     updateCSVPeriodMetric();
 
-    const setores = [...new Set(data.map(r => r['Setor Notificado']).filter(Boolean))].sort();
-    const turnos = [...new Set(data.map(r => r['Turno do Ocorrido:']).filter(Boolean))].sort();
+    const setores = [...new Set(allData.map(r => r['Setor Notificado']).filter(Boolean))].sort();
+    const turnos = [...new Set(allData.map(r => r['Turno do Ocorrido:']).filter(Boolean))].sort();
 
     const setorSelect = document.getElementById('filter-setor');
     setorSelect.innerHTML = '<option value="">Todos os Setores</option>';
@@ -199,10 +298,6 @@ function populateFilterOptions() {
 }
 
 function applyFilters() {
-    const stored = sessionStorage.getItem('nqsp_data');
-    if (!stored) return;
-    allData = JSON.parse(stored);
-
     const setor = document.getElementById('filter-setor').value;
     const turno = document.getElementById('filter-turno').value;
     const dateStart = document.getElementById('filter-date-start').value;
@@ -232,6 +327,7 @@ function applyFilters() {
     }
 
     filteredData = allData.filter(row => {
+        // Apply filters
         if (setor && row['Setor Notificado'] !== setor) return false;
         if (turno && row['Turno do Ocorrido:'] !== turno) return false;
         if (ds || de) {
@@ -256,43 +352,34 @@ function resetFilters() {
     document.getElementById('filter-setor').value = '';
     document.getElementById('filter-turno').value = '';
     
-    const stored = sessionStorage.getItem('nqsp_data');
-    if (stored) {
-        const data = JSON.parse(stored);
-        if (data.length > 0) {
-            const firstRow = data[0];
-            const lastRow = data[data.length - 1];
+    if (allData && allData.length > 0) {
+        const firstRow = allData[0];
+        const lastRow = allData[allData.length - 1];
+        
+        const dateStr1 = firstRow['Data de Registro'] || firstRow['Criado em'];
+        const dateStr2 = lastRow['Data de Registro'] || lastRow['Criado em'];
+        
+        const parsed1 = parseDate(dateStr1);
+        const parsed2 = parseDate(dateStr2);
+        
+        if (parsed1 && parsed2) {
+            selectedStart = parsed1.date;
+            selectedEnd = parsed2.date;
+        } else if (parsed1) {
+            selectedStart = parsed1.date;
+            selectedEnd = parsed1.date;
+        } else if (parsed2) {
+            selectedStart = parsed2.date;
+            selectedEnd = parsed2.date;
+        }
+        
+        if (selectedStart && selectedEnd) {
+            document.getElementById('filter-date-start').value = formatDateToISO(selectedStart);
+            document.getElementById('filter-date-end').value = formatDateToISO(selectedEnd);
             
-            const dateStr1 = firstRow['Data de Registro'] || firstRow['Criado em'];
-            const dateStr2 = lastRow['Data de Registro'] || lastRow['Criado em'];
-            
-            const parsed1 = parseDate(dateStr1);
-            const parsed2 = parseDate(dateStr2);
-            
-            if (parsed1 && parsed2) {
-                selectedStart = parsed1.date;
-                selectedEnd = parsed2.date;
-            } else if (parsed1) {
-                selectedStart = parsed1.date;
-                selectedEnd = parsed1.date;
-            } else if (parsed2) {
-                selectedStart = parsed2.date;
-                selectedEnd = parsed2.date;
-            }
-            
-            if (selectedStart && selectedEnd) {
-                document.getElementById('filter-date-start').value = formatDateToISO(selectedStart);
-                document.getElementById('filter-date-end').value = formatDateToISO(selectedEnd);
-                
-                const labelEl = document.getElementById('datepicker-label');
-                if (labelEl) {
-                    labelEl.textContent = `${formatDateToBR(selectedStart)} a ${formatDateToBR(selectedEnd)}`;
-                }
-            } else {
-                document.getElementById('filter-date-start').value = '';
-                document.getElementById('filter-date-end').value = '';
-                const labelEl = document.getElementById('datepicker-label');
-                if (labelEl) labelEl.textContent = 'Selecionar período';
+            const labelEl = document.getElementById('datepicker-label');
+            if (labelEl) {
+                labelEl.textContent = `${formatDateToBR(selectedStart)} a ${formatDateToBR(selectedEnd)}`;
             }
         } else {
             document.getElementById('filter-date-start').value = '';
@@ -385,25 +472,63 @@ function processData(data) {
         occMonthCounts
     };
 
+    // Update card headings based on active view
+    if (currentView === 'nc') {
+        document.getElementById('header-tipo-nc').textContent = 'Tipo de Não Conformidade';
+        document.getElementById('header-impacto').textContent = 'Impacto no Processo';
+        document.getElementById('header-consequencia').textContent = 'Requisito/Documento Violado';
+        document.getElementById('header-risco').textContent = 'Responsável';
+    } else {
+        document.getElementById('header-tipo-nc').textContent = 'Metas de Segurança do Paciente';
+        document.getElementById('header-impacto').textContent = 'Houve Consequências?';
+        document.getElementById('header-consequencia').textContent = 'Consequência do Dano';
+        document.getElementById('header-risco').textContent = 'Classificação do Risco';
+    }
+
     const classificacao = countByProperty(data, 'Classificação da Ocorrência');
     const sortedClass = Object.entries(classificacao).sort((a, b) => b[1] - a[1]);
     createBarChart('chart-classificacao', sortedClass, '#4285f4', true);
 
-    const tipoNC = countByProperty(data, 'Tipo de Não Conformidade');
+    let tipoNCKey = 'Tipo de Não Conformidade';
+    if (currentView === 'ea') {
+        const hasMetas = data.some(r => r['NC - Metas de Segurança paciente'] && r['NC - Metas de Segurança paciente'] !== 'n/d');
+        if (hasMetas) {
+            tipoNCKey = 'NC - Metas de Segurança paciente';
+        } else {
+            const hasAlternativeMetas = data.some(r => r['Metas de Segurança paciente'] && r['Metas de Segurança paciente'] !== 'n/d');
+            if (hasAlternativeMetas) {
+                tipoNCKey = 'Metas de Segurança paciente';
+            }
+        }
+    }
+    const tipoNC = countByProperty(data, tipoNCKey);
     const sortedTipo = Object.entries(tipoNC).sort((a, b) => b[1] - a[1]);
     createBarChart('chart-tipo-nc', sortedTipo, '#8b5cf6', true);
 
-    const impacto = countByProperty(data, 'Impacto no Processo');
+    const impactoKey = currentView === 'nc' ? 'Impacto no Processo' : 'Houve consequências para o paciente?';
+    const impacto = countByProperty(data, impactoKey);
     const sortedImpacto = Object.entries(impacto).sort((a, b) => b[1] - a[1]);
     createPieChart('chart-impacto', sortedImpacto, colorPalette);
 
-    const consequencia = countByProperty(data, 'Consequência do dano');
+    const consequenciaKey = currentView === 'nc' ? 'Requisito/Documento Violado' : 'Consequência do dano';
+    const consequencia = countByProperty(data, consequenciaKey);
     const sortedCons = Object.entries(consequencia).sort((a, b) => b[1] - a[1]);
-    createPieChart('chart-consequencia', sortedCons, colorPalette);
+    if (currentView === 'nc') {
+        // Use a bar chart for requirements since they are text-heavy and numerous
+        createBarChart('chart-consequencia', sortedCons.slice(0, 10), '#fbbc04', true);
+    } else {
+        createPieChart('chart-consequencia', sortedCons, colorPalette);
+    }
 
-    const risco = countByProperty(data, 'Classificação do Risco');
+    const riscoKey = currentView === 'nc' ? 'Responsável' : 'Classificação do Risco';
+    const risco = countByProperty(data, riscoKey);
     const sortedRisco = Object.entries(risco).sort((a, b) => b[1] - a[1]);
-    createBarChart('chart-risco', sortedRisco, ['#34a853', '#fbbc04', '#ea4335'], true);
+    if (currentView === 'nc') {
+        // Use a bar chart for Responsáveis since it's text-heavy
+        createBarChart('chart-risco', sortedRisco.slice(0, 10), '#06b6d4', true);
+    } else {
+        createBarChart('chart-risco', sortedRisco, ['#34a853', '#fbbc04', '#ea4335'], true);
+    }
 }
 
 function countByProperty(data, prop) {

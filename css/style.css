@@ -800,8 +800,37 @@ tbody tr:hover {
 }
 
 .upload-hero {
-    max-width: 480px;
+    max-width: 960px;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+}
+
+.upload-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.btn-large {
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: var(--radius-lg);
+}
+
+@media (max-width: 768px) {
+    .upload-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .upload-card {

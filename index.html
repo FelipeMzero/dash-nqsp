@@ -52,27 +52,59 @@
 
         <div class="page-content">
             <div class="upload-hero fade-in">
-                <div class="upload-card">
-                    <div class="upload-icon">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="12" y1="18" x2="12" y2="12"></line>
-                            <polyline points="9 15 12 12 15 15"></polyline>
-                        </svg>
+                <div class="upload-grid">
+                    <!-- Card 1: Não Conformidades -->
+                    <div class="upload-card">
+                        <div class="upload-icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="12" y1="18" x2="12" y2="12"></line>
+                                <polyline points="9 15 12 12 15 15"></polyline>
+                            </svg>
+                        </div>
+                        <h2>Não Conformidades</h2>
+                        <p>Carregue o arquivo CSV correspondente às Não Conformidades do NQSP.</p>
+                        <div class="drop-zone" id="drop-zone-nc">
+                            <span>Arraste e solte o CSV de NC aqui</span>
+                            <span class="drop-or">ou</span>
+                            <button class="btn btn-primary" id="btn-select-nc">Selecionar Arquivo</button>
+                            <input type="file" id="csv-file-nc" accept=".csv" hidden>
+                        </div>
+                        <div class="file-info hidden" id="file-info-nc">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <span id="file-name-nc"></span>
+                        </div>
                     </div>
-                    <h2>Importar Dados CSV</h2>
-                    <p>Selecione o arquivo CSV exportado do Interact para gerar o dashboard automaticamente.</p>
-                    <div class="drop-zone" id="drop-zone">
-                        <span>Arraste e solte o arquivo CSV aqui</span>
-                        <span class="drop-or">ou</span>
-                        <button class="btn btn-primary" id="btn-select">Selecionar Arquivo</button>
-                        <input type="file" id="csv-file" accept=".csv" hidden>
+
+                    <!-- Card 2: Eventos Adversos -->
+                    <div class="upload-card">
+                        <div class="upload-icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="12" y1="18" x2="12" y2="12"></line>
+                                <polyline points="9 15 12 12 15 15"></polyline>
+                            </svg>
+                        </div>
+                        <h2>Eventos Adversos</h2>
+                        <p>Carregue o arquivo CSV correspondente aos Eventos Adversos do NQSP.</p>
+                        <div class="drop-zone" id="drop-zone-ea">
+                            <span>Arraste e solte o CSV de EA aqui</span>
+                            <span class="drop-or">ou</span>
+                            <button class="btn btn-primary" id="btn-select-ea">Selecionar Arquivo</button>
+                            <input type="file" id="csv-file-ea" accept=".csv" hidden>
+                        </div>
+                        <div class="file-info hidden" id="file-info-ea">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <span id="file-name-ea"></span>
+                        </div>
                     </div>
-                    <div class="file-info hidden" id="file-info">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        <span id="file-name"></span>
-                    </div>
+                </div>
+
+                <!-- Generate Dashboard Action -->
+                <div class="upload-actions">
+                    <button class="btn btn-primary btn-large" id="btn-submit" disabled>Gerar Dashboard</button>
                 </div>
             </div>
         </div>
@@ -80,35 +112,69 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('csv-file');
-        const btnSelect = document.getElementById('btn-select');
-        const fileInfo = document.getElementById('file-info');
+        const dropZoneNC = document.getElementById('drop-zone-nc');
+        const fileInputNC = document.getElementById('csv-file-nc');
+        const btnSelectNC = document.getElementById('btn-select-nc');
+        const fileInfoNC = document.getElementById('file-info-nc');
+        const fileNameNC = document.getElementById('file-name-nc');
 
-        btnSelect.addEventListener('click', () => fileInput.click());
+        const dropZoneEA = document.getElementById('drop-zone-ea');
+        const fileInputEA = document.getElementById('csv-file-ea');
+        const btnSelectEA = document.getElementById('btn-select-ea');
+        const fileInfoEA = document.getElementById('file-info-ea');
+        const fileNameEA = document.getElementById('file-name-ea');
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) handleFile(e.target.files[0]);
+        const btnSubmit = document.getElementById('btn-submit');
+
+        let dataNC = null;
+        let dataEA = null;
+        let filenameNC = '';
+        let filenameEA = '';
+
+        btnSelectNC.addEventListener('click', () => fileInputNC.click());
+        btnSelectEA.addEventListener('click', () => fileInputEA.click());
+
+        fileInputNC.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleUpload(e.target.files[0], 'nc');
+        });
+        fileInputEA.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleUpload(e.target.files[0], 'ea');
         });
 
-        dropZone.addEventListener('dragover', (e) => {
+        // Drag & Drop NC
+        dropZoneNC.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.classList.add('drag-over');
+            dropZoneNC.classList.add('drag-over');
         });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
+        dropZoneNC.addEventListener('dragleave', () => dropZoneNC.classList.remove('drag-over'));
+        dropZoneNC.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            dropZoneNC.classList.remove('drag-over');
+            if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0], 'nc');
         });
 
-        function handleFile(file) {
-            document.getElementById('file-name').textContent = file.name;
-            fileInfo.classList.remove('hidden');
+        // Drag & Drop EA
+        dropZoneEA.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZoneEA.classList.add('drag-over');
+        });
+        dropZoneEA.addEventListener('dragleave', () => dropZoneEA.classList.remove('drag-over'));
+        dropZoneEA.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZoneEA.classList.remove('drag-over');
+            if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0], 'ea');
+        });
+
+        function handleUpload(file, type) {
+            if (type === 'nc') {
+                fileNameNC.textContent = file.name;
+                filenameNC = file.name;
+                fileInfoNC.classList.remove('hidden');
+            } else {
+                fileNameEA.textContent = file.name;
+                filenameEA = file.name;
+                fileInfoEA.classList.remove('hidden');
+            }
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -164,15 +230,34 @@
                             return normalizedRow;
                         });
 
-                        const jsonData = JSON.stringify(normalizedData);
-                        sessionStorage.setItem('nqsp_data', jsonData);
-                        sessionStorage.setItem('nqsp_filename', file.name);
-                        window.open('dashboard.html', '_blank');
+                        if (type === 'nc') {
+                            dataNC = normalizedData;
+                        } else {
+                            dataEA = normalizedData;
+                        }
+
+                        // Enable Generate Dashboard button if at least one file is successfully loaded
+                        if (dataNC || dataEA) {
+                            btnSubmit.removeAttribute('disabled');
+                        }
                     }
                 });
             };
             reader.readAsArrayBuffer(file);
         }
+
+        btnSubmit.addEventListener('click', () => {
+            sessionStorage.clear();
+            if (dataNC) {
+                sessionStorage.setItem('nqsp_data_nc', JSON.stringify(dataNC));
+                sessionStorage.setItem('nqsp_filename_nc', filenameNC);
+            }
+            if (dataEA) {
+                sessionStorage.setItem('nqsp_data_ea', JSON.stringify(dataEA));
+                sessionStorage.setItem('nqsp_filename_ea', filenameEA);
+            }
+            window.location.href = 'dashboard.html';
+        });
     </script>
 </body>
 </html>
