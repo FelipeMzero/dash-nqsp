@@ -507,13 +507,23 @@ function processData(data) {
     populateStatusTable(sortedStatus);
     createPieChart('chart-status-pie', sortedStatus, colorPalette);
 
-    const setorNotificado = countByProperty(data, 'Setor Notificado');
-    const sortedSetorNotificado = Object.entries(setorNotificado).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    createBarChart('chart-setor-notificado', sortedSetorNotificado, barColor, true);
+    if (currentView === 'compare') {
+        const raca = countByProperty(data, 'Raça / Cor');
+        const sortedRaca = Object.entries(raca).sort((a, b) => b[1] - a[1]);
+        createBarChart('chart-setor-notificado', sortedRaca, '#14b8a6', true);
 
-    const setorNotificador = countByProperty(data, 'Setor Notificante');
-    const sortedSetorNotificador = Object.entries(setorNotificador).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    createBarChart('chart-setor-notificador', sortedSetorNotificador, barColor2, true);
+        const sexo = countByProperty(data, 'Sexo');
+        const sortedSexo = Object.entries(sexo).sort((a, b) => b[1] - a[1]);
+        createPieChart('chart-setor-notificador', sortedSexo, colorPalette);
+    } else {
+        const setorNotificado = countByProperty(data, 'Setor Notificado');
+        const sortedSetorNotificado = Object.entries(setorNotificado).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        createBarChart('chart-setor-notificado', sortedSetorNotificado, barColor, true);
+
+        const setorNotificador = countByProperty(data, 'Setor Notificante');
+        const sortedSetorNotificador = Object.entries(setorNotificador).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        createBarChart('chart-setor-notificador', sortedSetorNotificador, barColor2, true);
+    }
 
     // Linha do Tempo (Registro vs. Ocorrência)
     const regMonthCounts = {};
@@ -565,18 +575,24 @@ function processData(data) {
 
     // Update card headings based on active view
     if (currentView === 'nc') {
+        document.getElementById('header-setor-notificado').textContent = 'Setor Notificado';
+        document.getElementById('header-setor-notificador').textContent = 'Setor Notificador';
         document.getElementById('header-tipo-nc').textContent = 'Tipo de Não Conformidade';
         document.getElementById('header-impacto').textContent = 'Impacto no Processo';
         document.getElementById('header-consequencia').textContent = 'Requisito/Documento Violado';
         document.getElementById('header-risco').textContent = 'Responsável';
     } else if (currentView === 'ea') {
+        document.getElementById('header-setor-notificado').textContent = 'Setor Notificado';
+        document.getElementById('header-setor-notificador').textContent = 'Setor Notificador';
         document.getElementById('header-tipo-nc').textContent = 'Metas de Segurança do Paciente';
         document.getElementById('header-impacto').textContent = 'Houve Consequências?';
         document.getElementById('header-consequencia').textContent = 'Consequência do Dano';
         document.getElementById('header-risco').textContent = 'Classificação do Risco';
     } else if (currentView === 'compare') {
+        document.getElementById('header-setor-notificado').textContent = 'Distribuição por Raça/Cor';
+        document.getElementById('header-setor-notificador').textContent = 'Distribuição por Sexo';
         document.getElementById('header-tipo-nc').textContent = 'Tipo de Ocorrência (Geral)';
-        document.getElementById('header-impacto').textContent = 'Distribuição por Sexo';
+        document.getElementById('header-impacto').textContent = 'Status da Ocorrência';
         document.getElementById('header-consequencia').textContent = 'Distribuição por Faixa Etária';
         document.getElementById('header-risco').textContent = 'Avaliação de Desempenho (Responsável)';
     }
@@ -602,9 +618,8 @@ function processData(data) {
     createBarChart('chart-tipo-nc', sortedTipo, '#8b5cf6', true);
 
     if (currentView === 'compare') {
-        const sexo = countByProperty(data, 'Sexo');
-        const sortedSexo = Object.entries(sexo).sort((a, b) => b[1] - a[1]);
-        createPieChart('chart-impacto', sortedSexo, colorPalette);
+        const sortedStatus = Object.entries(statusCounts).sort((a, b) => b[1] - a[1]);
+        createBarChart('chart-impacto', sortedStatus, '#ea4335', true);
     } else {
         const impactoKey = currentView === 'nc' ? 'Impacto no Processo' : 'Houve consequências para o paciente?';
         const impacto = countByProperty(data, impactoKey);
