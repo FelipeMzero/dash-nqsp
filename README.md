@@ -1,4 +1,4 @@
-# Dashboard NQSP — Não Conformidades
+# Dashboard NQSP
 
 **Núcleo de Qualidade e Segurança do Paciente — HRMJ**
 
